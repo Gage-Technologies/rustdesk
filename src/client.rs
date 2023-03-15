@@ -1679,15 +1679,6 @@ where
             if let Ok(data) = video_receiver.recv() {
                 match data {
                     MediaData::VideoFrame(vf) => {
-                        // TODO: integrate with a backlog tracker
-                        // for testing drop frames if our backlog exceeds 10 frames
-                        if video_receiver.len() > 10 {
-                            println!("client: video frame dropped: {} frames backlogged", video_receiver.len());
-                            continue;
-                        } else {
-                            println!("client: {} frames backlogged", video_receiver.len());
-                        }
-
                         if let Ok(true) = video_handler.handle_frame(vf) {
                             video_callback(&mut video_handler.rgb);
                         }

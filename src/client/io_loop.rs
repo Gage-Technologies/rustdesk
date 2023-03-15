@@ -825,7 +825,14 @@ impl<T: InvokeUiSession> Remote<T> {
                             ..Default::default()
                         })
                     };
-                    self.video_sender.send(MediaData::VideoFrame(vf)).ok();
+                    // TODO: integrate with a backlog tracker
+                    // for testing drop frames if our backlog exceeds 10 frames
+                    if self.video_sender.len() > 10 {
+                        println!("client: video frame dropped: {} frames backlogged", self.video_sender.len());
+                    } else {
+                        println!("client: {} frames backlogged", self.video_sender.len());
+                        self.video_sender.send(MediaData::VideoFrame(vf)).ok();
+                    }
                 }
                 Some(message::Union::Hash(hash)) => {
                     self.handler
