@@ -3,7 +3,7 @@ use std::{
     net::SocketAddr,
     ops::{Deref, Not},
     str::FromStr,
-    sync::{mpsc, Arc, Mutex, RwLock},
+    sync::{Arc, Mutex, RwLock},
 };
 
 pub use async_trait::async_trait;
@@ -56,6 +56,10 @@ use crate::{
 use crate::{
     common::{check_clipboard, ClipboardContext, CLIPBOARD_INTERVAL},
     ui_session_interface::SessionPermissionConfig,
+};
+
+use crossbeam::{
+    channel
 };
 
 pub use super::lang::*;
@@ -1651,7 +1655,7 @@ pub enum MediaData {
     RecordScreen(bool, i32, i32, String),
 }
 
-pub type MediaSender = mpsc::Sender<MediaData>;
+pub type MediaSender = channel::Sender<MediaData>;
 
 /// Start video and audio thread.
 /// Return two [`MediaSender`], they should be given to the media producer.
@@ -1663,7 +1667,7 @@ pub fn start_video_audio_threads<F>(video_callback: F) -> (MediaSender, MediaSen
 where
     F: 'static + FnMut(&mut Vec<u8>) + Send,
 {
-    let (video_sender, video_receiver) = mpsc::channel::<MediaData>();
+    let (video_sender, video_receiver) = channel::unbounded::<MediaData>();
     let mut video_callback = video_callback;
 
     let latency_controller = LatencyController::new();
@@ -1675,6 +1679,13 @@ where
             if let Ok(data) = video_receiver.recv() {
                 match data {
                     MediaData::VideoFrame(vf) => {
+                        // TODO: integrate with a backlog tracker
+                        // for testing drop frames if our backlog exceeds 10 frames
+                        if video_receiver.len() > 10 {
+                            log::warn!("video frame dropped: {} frames backlogged", video_receiver.len());
+                            continue;
+                        }
+
                         if let Ok(true) = video_handler.handle_frame(vf) {
                             video_callback(&mut video_handler.rgb);
                         }
@@ -1703,7 +1714,7 @@ pub fn start_audio_thread(
     latency_controller: Option<Arc<Mutex<LatencyController>>>,
 ) -> MediaSender {
     let latency_controller = latency_controller.unwrap_or(LatencyController::new());
-    let (audio_sender, audio_receiver) = mpsc::channel::<MediaData>();
+    let (audio_sender, audio_receiver) = channel::unbounded::<MediaData>();
     std::thread::spawn(move || {
         let mut audio_handler = AudioHandler::new(latency_controller);
         loop {
