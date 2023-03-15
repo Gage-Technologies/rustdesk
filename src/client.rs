@@ -1682,8 +1682,10 @@ where
                         // TODO: integrate with a backlog tracker
                         // for testing drop frames if our backlog exceeds 10 frames
                         if video_receiver.len() > 10 {
-                            log::warn!("video frame dropped: {} frames backlogged", video_receiver.len());
+                            println!("client: video frame dropped: {} frames backlogged", video_receiver.len());
                             continue;
+                        } else {
+                            println!("client: {} frames backlogged", video_receiver.len());
                         }
 
                         if let Ok(true) = video_handler.handle_frame(vf) {
