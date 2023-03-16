@@ -818,14 +818,6 @@ impl<T: InvokeUiSession> Remote<T> {
                         self.handler.adapt_size();
                         self.send_opts_after_login(peer).await;
                     }
-                    let incoming_format = CodecFormat::from(&vf);
-                    if self.video_format != incoming_format {
-                        self.video_format = incoming_format.clone();
-                        self.handler.update_quality_status(QualityStatus {
-                            codec_format: Some(incoming_format),
-                            ..Default::default()
-                        })
-                    };
                     // NOTE: this is still buffering upstream track back the last buffer point
                     // TODO: integrate with a backlog tracker
                     // for testing drop frames if our backlog exceeds 10 frames
@@ -833,6 +825,15 @@ impl<T: InvokeUiSession> Remote<T> {
                         println!("{} client: video frame dropped: {} frames backlogged", Local::now().timestamp(), self.video_sender.len());
                     } else {
                         println!("{} client: {} frames backlogged", Local::now().timestamp(), self.video_sender.len());
+                        
+                        let incoming_format = CodecFormat::from(&vf);
+                        if self.video_format != incoming_format {
+                            self.video_format = incoming_format.clone();
+                            self.handler.update_quality_status(QualityStatus {
+                                codec_format: Some(incoming_format),
+                                ..Default::default()
+                            })
+                        };
                         self.video_sender.send(MediaData::VideoFrame(vf)).ok();
                     }
                 }
