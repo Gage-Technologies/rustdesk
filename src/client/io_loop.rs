@@ -3,6 +3,7 @@ use std::num::NonZeroI64;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
+use chrono::Local;
 #[cfg(windows)]
 use clipboard::{cliprdr::CliprdrClientContext, ContextSend};
 use hbb_common::config::{PeerConfig, TransferSerde};
@@ -825,12 +826,13 @@ impl<T: InvokeUiSession> Remote<T> {
                             ..Default::default()
                         })
                     };
+                    // NOTE: this is still buffering upstream track back the last buffer point
                     // TODO: integrate with a backlog tracker
                     // for testing drop frames if our backlog exceeds 10 frames
                     if self.video_sender.len() > 10 {
-                        println!("client: video frame dropped: {} frames backlogged", self.video_sender.len());
+                        println!("{} client: video frame dropped: {} frames backlogged", Local::now().timestamp(), self.video_sender.len());
                     } else {
-                        println!("client: {} frames backlogged", self.video_sender.len());
+                        println!("{} client: {} frames backlogged", Local::now().timestamp(), self.video_sender.len());
                         self.video_sender.send(MediaData::VideoFrame(vf)).ok();
                     }
                 }
