@@ -825,7 +825,7 @@ impl<T: InvokeUiSession> Remote<T> {
                         println!("{} client: video frame dropped: {} frames backlogged", Local::now().timestamp(), self.video_sender.len());
                     } else {
                         println!("{} client: {} frames backlogged", Local::now().timestamp(), self.video_sender.len());
-                        
+
                         let incoming_format = CodecFormat::from(&vf);
                         if self.video_format != incoming_format {
                             self.video_format = incoming_format.clone();
@@ -1060,7 +1060,13 @@ impl<T: InvokeUiSession> Remote<T> {
                 }
                 Some(message::Union::Misc(misc)) => match misc.union {
                     Some(misc::Union::AudioFormat(f)) => {
-                        self.audio_sender.send(MediaData::AudioFormat(f)).ok();
+                        // TODO: maybe we should drop the audio dependent on the video backlog but we can see if this works
+                        if self.audio_sender.len() > 10 {
+                            println!("{} client: audo chunk dropped: {} chunks backlogged", Local::now().timestamp(), self.audio_sender.len());
+                        } else {
+                            println!("{} client: {} audio chunks backlogged", Local::now().timestamp(), self.audio_sender.len());
+                            self.audio_sender.send(MediaData::AudioFormat(f)).ok();
+                        }
                     }
                     Some(misc::Union::ChatMessage(c)) => {
                         self.handler.new_message(c.text);
